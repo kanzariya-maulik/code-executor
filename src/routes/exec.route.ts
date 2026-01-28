@@ -1,7 +1,7 @@
-import { Router } from "express";
+import express from "express";
 import { execController } from "../controller/exec.controller.js";
 
-const router = Router();
+const router: express.Router = express.Router();
 
 router.post("/run", execController);
 
