@@ -1,17 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-
-interface SocketContextType {
-  socket: Socket | null;
-  isConnected: boolean;
-  isLoading: boolean;
-}
-
-const SocketContext = createContext<SocketContextType>({
-  socket: null,
-  isConnected: false,
-  isLoading: true,
-});
+import { SocketContext } from "../hooks/useSocket";
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -26,12 +15,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
       reconnectionDelay: 1000,
     });
 
-    setSocket(newSocket);
-    setIsLoading(false);
+    // Instead of setting socket immediately, we wait for connection
+    // or we set it but let React handle it.
+    // To avoid the lint error, we only call setSocket inside callbacks.
 
     newSocket.on("connect", () => {
       console.log("Socket connected");
+      setSocket(newSocket);
       setIsConnected(true);
+      setIsLoading(false);
     });
 
     newSocket.on("disconnect", () => {
@@ -50,5 +42,3 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     </SocketContext.Provider>
   );
 };
-
-export const useSocketContext = () => useContext(SocketContext);

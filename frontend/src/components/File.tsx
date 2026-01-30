@@ -1,13 +1,25 @@
-import React, { useState } from "react";
 import Editor from "@monaco-editor/react";
+import { useEffect, useState } from "react";
+import { useSocketContext } from "../hooks/useSocket";
 
 function CodeEditor() {
-  const [code, setCode] = useState<string | undefined>("// Start coding here!");
+  const [code, setCode] = useState("");
+  const {socket} = useSocketContext();
 
   function handleEditorChange(value: string | undefined) {
-    setCode(value);
     console.log("here is the current model value:", value);
+    setCode(value || "");
+    socket?.emit("files:update", value || "");
   }
+
+  useEffect(() => {
+    socket?.on("files:update", (data: string) => {
+      setCode(data);
+    });
+    return () => {
+      socket?.off("files:update");
+    };
+  }, [socket]);
 
   return (
     <div style={{ height: "500px" }}>

@@ -4,7 +4,9 @@ import { Server } from "socket.io";
 import type { Socket } from "socket.io";
 import http from "http";
 import cors from "cors";
-import Docker from "dockerode";
+import { containerService } from "./service/container.service.js";
+import { fileRegister } from "./register/file.register.js";
+import { terminalRegister } from "./register/terminal.register.js";
 
 const app = express();
 const PORT = 3000;
@@ -25,41 +27,17 @@ const io = new Server(server, {
   },
 });
 
-const manager = new Map<string, Docker.Container>();
-
-io.on("connection", (socket: Socket) => {
+io.on("connection", async (socket: Socket) => {
   console.log("a user connected", socket.id);
 
-  const container = spawn("docker", [
-    "run",
-    "-i",
-    "--rm",
-    "ubuntu",
-    "/bin/bash",
-  ]); 
+  const container = await containerService.create();
 
-  container.stdin.write("mkdir /app\n");
-  container.stdin.write("cd /app\n");
-
-  container.stdout.on("data", (data) => {
-    socket.emit("output", { data: data.toString(), type: "stdout" });
-  });
-
-  container.stderr.on("data", (data) => {
-    socket.emit("output", { data: data.toString(), type: "stderr" });
-  });
-
-  socket.on("getFiles", (id: string) => {
-    container.stdin.write("ls\n");
-  });
-
-  socket.on("command", (command: string) => {
-    container.stdin.write(command + "\n");
-  });
+  fileRegister(socket, container);
+  terminalRegister(socket, container);
 
   socket.on("disconnect", () => {
     console.log("user disconnected", socket.id);
-    container.kill();
+    containerService.remove(container);
   });
 });
 

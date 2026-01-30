@@ -1,101 +1,129 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { useSocketContext } from "../context/SocketContext";
+import { useSocketContext } from "../hooks/useSocket";
+import { useTerminal } from "../services/terminal.service";
 
-export default function TerminalComponent() {
+interface TermInstance {
+  id: string;
+  term: Terminal;
+  fit: FitAddon;
+  wrapper: HTMLDivElement;
+}
+
+export default function TerminalPanel() {
   const { socket } = useSocketContext();
+  const { createTerminal, writeCommand, closeTerminal } = useTerminal();
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<Terminal | null>(null);
-  const fitRef = useRef<FitAddon | null>(null);
-  const bufferRef = useRef("");
+  const terminalsRef = useRef<Map<string, TermInstance>>(new Map());
+
+  const [terminalIds, setTerminalIds] = useState<string[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const addTerminal = () => {
+    const id = crypto.randomUUID();
+    createTerminal({ id });
+  };
 
   useEffect(() => {
-    if (!containerRef.current || termRef.current) return;
+    if (!socket || !containerRef.current) return;
 
-    const term = new Terminal({
-      cursorBlink: true,
-      fontSize: 14,
-      theme: {
-        background: "#0f172a", 
-        foreground: "#e2e8f0", 
-        cursor: "#38bdf8",
-        selectionBackground: "rgba(56, 189, 248, 0.3)",
-      },
-      fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-      convertEol: true,
+    socket.on("terminal:create", ({ id }: { id: string }) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "h-full w-full";
+      wrapper.style.display = "none";
+      containerRef.current!.appendChild(wrapper);
+
+      const term = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        convertEol: true,
+        fontFamily: '"JetBrains Mono", monospace',
+        theme: {
+          background: "#0f172a",
+          foreground: "#f8fafc",
+          cursor: "#38bdf8",
+          selectionBackground: "#334155",
+        },
+      });
+
+      const fit = new FitAddon();
+      term.loadAddon(fit);
+      term.open(wrapper);
+
+      term.onData((data) => {
+        writeCommand({ id, command: data });
+      });
+
+      terminalsRef.current.set(id, { id, term, fit, wrapper });
+      setTerminalIds((prev) => [...prev, id]);
+      setActiveId(id);
     });
 
-    const fit = new FitAddon();
-    term.loadAddon(fit);
-
-    term.open(containerRef.current);
-    term.focus();
-
-    setTimeout(() => fit.fit(), 0);
-
-    term.writeln("\x1b[1;34mWelcome to ExecRunner Terminal\x1b[0m");
-    term.writeln("Connected to backend...");
-    term.write("\r\n$ ");
-
-    term.onData((data) => {
-      if (data === "\r") {
-        if (bufferRef.current.trim()) {
-          socket?.emit("command", bufferRef.current);
-        }
-        bufferRef.current = "";
-        term.write("\r\n$ ");
-      } else if (data === "\u007F") {
-        if (bufferRef.current.length > 0) {
-          bufferRef.current = bufferRef.current.slice(0, -1);
-          term.write("\b \b");
-        }
-      } else {
-        bufferRef.current += data;
-        term.write(data);
-      }
+    socket.on(`output-${id}`, (data: string) => {
+      terminalsRef.current.get(id)?.term.write(data);
     });
-
-    const handleOutput = (out: any) => {
-      term.write("\r\n" + out.data + "\r\n$ ");
-    };
-
-    socket?.on("output", handleOutput);
-
-    termRef.current = term;
-    fitRef.current = fit;
-
-    const handleResize = () => {
-      fit.fit();
-    };
-    window.addEventListener("resize", handleResize);
 
     return () => {
-      socket?.off("output", handleOutput);
-      window.removeEventListener("resize", handleResize);
-      term.dispose();
-      termRef.current = null;
+      socket.off("terminal:create");
+      socket.off(`output-${id}`);
     };
   }, [socket]);
 
+  useEffect(() => {
+    terminalsRef.current.forEach(({ wrapper, fit }, id) => {
+      const active = id === activeId;
+      wrapper.style.display = active ? "block" : "none";
+
+      if (active) {
+        requestAnimationFrame(() => fit.fit());
+      }
+    });
+  }, [activeId]);
+
+  useEffect(() => {
+    return () => {
+      terminalsRef.current.forEach(({ id, term }) => {
+        closeTerminal({ id });
+        term.dispose();
+      });
+      terminalsRef.current.clear();
+    };
+  }, []);
+
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "#0f172a",
-        padding: "12px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        ref={containerRef}
-        style={{
-          width: "100%",
-          height: "100%",
-        }}
-      />
+    <div className="h-full flex flex-col bg-slate-900 border-t border-slate-800">
+      {/* Tabs */}
+      <div className="flex items-center gap-1 px-2 py-1 bg-slate-800 border-b border-slate-700">
+        {terminalIds.map((id, idx) => (
+          <button
+            key={id}
+            onClick={() => setActiveId(id)}
+            className={`
+              px-3 py-1 text-xs rounded
+              ${
+                activeId === id
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-400 hover:text-white"
+              }
+            `}
+          >
+            Terminal {idx + 1}
+          </button>
+        ))}
+
+        <button
+          onClick={addTerminal}
+          className="ml-auto px-2 text-slate-400 hover:text-white"
+        >
+          +
+        </button>
+      </div>
+
+      {/* Terminal area */}
+      <div ref={containerRef} className="flex-1 relative" />
     </div>
   );
 }
