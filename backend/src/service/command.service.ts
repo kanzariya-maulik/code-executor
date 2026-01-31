@@ -42,6 +42,6 @@ export const commandService = {
   },
 
   executeCommand(terminal: Duplex, command: string) {
-    terminal.write(command + "\n");
+    terminal.write(command);
   },
 };

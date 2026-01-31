@@ -33,35 +33,41 @@ const FileTreeView: React.FC<Props> = ({
             <div
               style={{ paddingLeft: depth * INDENT }}
               className={`
-                flex items-center gap-2 py-1 px-2 text-sm cursor-pointer rounded
-                ${isSelected ? "bg-neutral-900 text-white" : "text-neutral-300"}
-                hover:bg-neutral-800
+                flex items-center gap-1.5 py-[3px] px-2 text-[13px] cursor-pointer select-none transition-colors
+                ${isSelected ? "bg-[var(--vscode-list-active)] text-white" : "text-[var(--vscode-text)]"}
+                hover:bg-[var(--vscode-list-hover)]
+                ${isSelected ? "focus:outline-none" : ""}
               `}
               onClick={() => onSelect(node)}
             >
               {/* Arrow */}
-              {isDir && (
-                <span
-                  className="w-3 text-xs text-neutral-500 hover:text-white"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCollapsed((c) => ({
-                      ...c,
-                      [node.path]: !c[node.path],
-                    }));
+              <span
+                className={`w-4 text-center shrink-0 text-neutral-400 ${!isDir ? "invisible" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCollapsed((c) => ({
+                    ...c,
+                    [node.path]: !c[node.path],
+                  }));
+                }}
+              >
+                <div
+                  style={{
+                    transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                    transition: "transform 0.1s",
                   }}
                 >
-                  {isCollapsed ? "▸" : "▾"}
-                </span>
-              )}
+                  ▼
+                </div>
+              </span>
 
               {/* Icon */}
-              <span className="text-neutral-500">
+              <span className="shrink-0">
                 {isDir ? <FolderIcon /> : <FileIcone />}
               </span>
 
               {/* Name */}
-              <span className="truncate">{name}</span>
+              <span className="truncate leading-none pt-[1px]">{name}</span>
             </div>
 
             {/* Children */}

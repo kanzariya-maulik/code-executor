@@ -22,7 +22,6 @@ const App: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-900 text-white font-medium">
         <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700 max-w-md text-center">
-          <div className="text-red-400 text-5xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold mb-2">Connection Failed</h1>
           <p className="text-slate-400 mb-6">
             Could not establish a connection to the server. Please ensure the
@@ -41,7 +40,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen bg-slate-900 text-slate-200 overflow-hidden">
-      <div className="w-64 border-r border-slate-800 bg-slate-950 flex-shrink-0">
+      <div className="w-auto border-r border-[#2b2b2b] bg-[#252526] flex-shrink-0">
         <Sidebar />
       </div>
 
@@ -50,18 +49,7 @@ const App: React.FC = () => {
           <File />
         </div>
         <div className="h-1/3 min-h-[200px] border-t border-slate-800 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border-b border-slate-800">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Terminal
-            </span>
-            <div className="flex gap-2">
-              <div className="w-3 h-3 rounded-full bg-slate-700"></div>
-              <div className="w-3 h-3 rounded-full bg-slate-700"></div>
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden relative">
-            <TerminalComponent />
-          </div>
+          <TerminalComponent />
         </div>
       </div>
     </div>

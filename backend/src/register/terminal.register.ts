@@ -7,6 +7,7 @@ const terminals = new Map<string, Terminal>();
 
 export const terminalRegister = (socket: Socket, container: Container) => {
   socket.on("terminal:create", async ({ id }) => {
+    console.log("GOT TERMINAL CREATE REQUEST");
     const terminal = await terminalService.create(container, id);
     terminals.set(id, terminal);
 
@@ -14,7 +15,7 @@ export const terminalRegister = (socket: Socket, container: Container) => {
       socket.emit(`output-${id}`, data.toString());
     });
 
-    socket.emit("terminal:create", id);
+    socket.emit("terminal:create", { id });
   });
 
   socket.on("terminal:close", ({ id }) => {
@@ -24,7 +25,7 @@ export const terminalRegister = (socket: Socket, container: Container) => {
     terminals.delete(id);
   });
 
-  socket.on("command", ({ id, command }) => {
+  socket.on("terminal:command", ({ id, command }) => {
     const t = terminals.get(id);
     if (!t) return;
 
