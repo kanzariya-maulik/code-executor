@@ -117,7 +117,7 @@ export default function TerminalPanel() {
         </div>
 
         <div className="flex items-center ml-4 gap-2 border-l border-[#2b2b2b] pl-2">
-          {terminalIds.map((id, idx) => (
+          {terminalIds.map((id) => (
             <button
               key={id}
               onClick={() => setActiveId(id)}
@@ -131,6 +131,18 @@ export default function TerminalPanel() {
               `}
             >
               <span className="truncate max-w-[80px]">bash</span>
+              {terminalIds.length > 1 && (
+                <button
+                  className="text-white/50 hover:text-white p-1"
+                  onClick={() => {
+                    closeTerminal({ id });
+                    setActiveId(null);
+                    setTerminalIds((prev) => prev.filter((t) => t !== id));
+                  }}
+                >
+                  X
+                </button>
+              )}
             </button>
           ))}
 
@@ -165,6 +177,12 @@ export default function TerminalPanel() {
           </button>
         </div>
       </div>
+
+      {terminalIds.length === 0 && (
+        <div className="flex items-center justify-center h-full w-full bg-[#1e1e1e] ">
+          No terminals available
+        </div>
+      )}
 
       <div
         ref={containerRef}

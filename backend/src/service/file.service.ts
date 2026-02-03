@@ -117,18 +117,46 @@ export const fileService = {
 
   async updateFile(
     container: Container,
-    path: string,
+    dir: string,
     name: string,
     content: string,
   ) {
-    validate(path, name);
-    await exec(container, [
-      "bash",
-      "-c",
-      `cat << 'EOF' > "/sandbox/${path}/${name}"
-${content}
-EOF`,
-    ]);
+    validate(dir, name);
+
+    const exec = await container.exec({
+      Cmd: ["bash", "-c", `cat > /sandbox/${dir}/${name}`],
+      AttachStdin: true,
+      AttachStdout: true,
+      AttachStderr: true,
+    });
+
+    const stream = await exec.start({ hijack: true });
+
+    stream.write(content);
+    stream.end();
+
     return true;
+  },
+
+  async getFileContent(container: Container, dir: string, name: string) {
+    validate(dir, name);
+
+    const exec = await container.exec({
+      Cmd: ["bash", "-c", `cat /sandbox/${dir}/${name}`],
+      AttachStdout: true,
+      AttachStderr: true,
+    });
+
+    const stream = await exec.start({ hijack: true });
+
+    let data = "";
+    stream.on("data", (chunk) => {
+      data += chunk.toString("utf8");
+    });
+
+    return await new Promise<string>((resolve, reject) => {
+      stream.on("end", () => resolve(data));
+      stream.on("error", reject);
+    });
   },
 };

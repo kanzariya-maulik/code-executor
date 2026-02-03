@@ -15,10 +15,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
       reconnectionDelay: 1000,
     });
 
-    // Instead of setting socket immediately, we wait for connection
-    // or we set it but let React handle it.
-    // To avoid the lint error, we only call setSocket inside callbacks.
-
     newSocket.on("connect", () => {
       console.log("Socket connected");
       setSocket(newSocket);

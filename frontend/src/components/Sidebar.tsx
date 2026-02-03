@@ -1,14 +1,19 @@
 import { useSocketContext } from "../hooks/useSocket";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FileTree, FileTreeNode } from "../types";
 import { useFile } from "../services/files.service";
 import FileTreeView from "./ui/FileTree";
+import { useFileContext } from "../context/FileContext";
 
 const Sidebar: React.FC = () => {
   const [files, setFiles] = useState<FileTree>({});
   const { socket } = useSocketContext();
   const { listFiles, createFile, createFolder } = useFile();
+  const { setOpenFiles, setCurrentOpenFile } = useFileContext();
   const [selectedFolder, setSelectedFolder] = useState<FileTreeNode | "">("");
+  const [createType, setCreateType] = useState<"file" | "folder" | null>(null);
+  const [takeName, setTakeName] = useState(false);
+  const [fileNameInput, setFileNameInput] = useState("");
 
   useEffect(() => {
     if (!socket) return;
@@ -33,9 +38,30 @@ const Sidebar: React.FC = () => {
     console.log("files", files);
   }, [files]);
 
+  const createFileHandler = useCallback(() => {
+    createFile({
+      path: selectedFolder
+        ? typeof selectedFolder === "string"
+          ? ""
+          : selectedFolder.path
+        : "",
+      name: fileNameInput,
+    });
+  }, [fileNameInput]);
+
+  const createFolderHandler = useCallback(() => {
+    createFolder({
+      path: selectedFolder
+        ? typeof selectedFolder === "string"
+          ? ""
+          : selectedFolder.path
+        : "",
+      name: fileNameInput,
+    });
+  }, [fileNameInput]);
+
   return (
     <div className="flex h-full text-white select-none">
-      {/* Activity Bar */}
       <div className="w-[48px] flex-shrink-0 flex flex-col items-center py-2 bg-[var(--vscode-activity-bar-bg)] border-r border-[#1e1e1e]">
         <div className="p-3 mb-2 cursor-pointer border-l-2 border-white opacity-100">
           <svg
@@ -84,14 +110,10 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Explorer Side Bar */}
       <div className="w-64 flex flex-col bg-[var(--vscode-sidebar-bg)] border-r border-[var(--vscode-panel-border)]">
-        {/* Header */}
         <div className="h-9 flex items-center px-4 text-[11px] font-bold tracking-wider text-[var(--vscode-text-muted)] uppercase cursor-default">
           Explorer
         </div>
-
-        {/* Section Header */}
         <div className="flex items-center justify-between px-4 py-1 bg-[#37373d] text-white/90 text-[11px] font-bold uppercase cursor-pointer">
           <div className="flex items-center gap-1">
             <span className="text-[10px]">▼</span>
@@ -100,17 +122,10 @@ const Sidebar: React.FC = () => {
           <div className="flex gap-2 opacity-100">
             <button
               title="New File"
-              onClick={() =>
-                createFile({
-                  path: selectedFolder
-                    ? typeof selectedFolder === "string"
-                      ? ""
-                      : selectedFolder.path
-                    : "",
-                  name: "file.txt",
-                })
-              }
-              className="hover:scale-110 transition-transform"
+              onClick={() => {
+                setCreateType("file");
+                setTakeName(true);
+              }}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="#cccccc">
                 <path d="M9 1v6h6v1H9v6H8V8H2V7h6V1h1z" />
@@ -118,17 +133,10 @@ const Sidebar: React.FC = () => {
             </button>
             <button
               title="New Folder"
-              onClick={() =>
-                createFolder({
-                  path: selectedFolder
-                    ? typeof selectedFolder === "string"
-                      ? ""
-                      : selectedFolder.path
-                    : "",
-                  name: "folder",
-                })
-              }
-              className="hover:scale-110 transition-transform"
+              onClick={() => {
+                setCreateType("folder");
+                setTakeName(true);
+              }}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="#cccccc">
                 <path d="M7.5 5l-1-1H2v10h12V5H7.5zM2 4h4.5l1 1H14v10H2V4z" />
@@ -143,8 +151,43 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Tree */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden pt-1">
+          {takeName && (
+            <div className="px-4 py-1">
+              <input
+                autoFocus
+                type="text"
+                placeholder={
+                  createType === "file" ? "New File Name" : "New Folder Name"
+                }
+                value={fileNameInput}
+                onChange={(e) => setFileNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (!fileNameInput.trim()) return;
+
+                    if (createType === "file") {
+                      createFileHandler();
+                    } else if (createType === "folder") {
+                      createFolderHandler();
+                    }
+
+                    setTakeName(false);
+                    setCreateType(null);
+                    setFileNameInput("");
+                  }
+
+                  if (e.key === "Escape") {
+                    setTakeName(false);
+                    setCreateType(null);
+                    setFileNameInput("");
+                  }
+                }}
+                className="w-full px-2 py-1 text-sm bg-[#3c3c3c] text-white border border-[#007acc] outline-none rounded"
+              />
+            </div>
+          )}
+
           <FileTreeView
             tree={files}
             selectedPath={
@@ -155,6 +198,14 @@ const Sidebar: React.FC = () => {
             onSelect={(node) => {
               if (node.type === "dir") {
                 setSelectedFolder(node);
+              } else if (node.type == "file") {
+                setOpenFiles((prev) => {
+                  if (prev.some((file) => file.path === node.path)) return prev;
+                  return [...prev, node];
+                });
+                setCurrentOpenFile(node);
+              } else {
+                setSelectedFolder("");
               }
             }}
           />
