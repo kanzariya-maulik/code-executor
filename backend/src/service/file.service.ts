@@ -124,7 +124,7 @@ export const fileService = {
     validate(dir, name);
 
     const exec = await container.exec({
-      Cmd: ["bash", "-c", `cat > /sandbox/${dir}/${name}`],
+      Cmd: ["bash", "-c", `cat > /sandbox/${dir}`],
       AttachStdin: true,
       AttachStdout: true,
       AttachStderr: true,

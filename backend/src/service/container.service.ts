@@ -13,7 +13,7 @@ async function waitForExec(exec: Docker.Exec): Promise<void> {
 export const containerService = {
   async create(): Promise<Container> {
     const container = await docker.createContainer({
-      Image: "ubuntu",
+      Image: "code-runner-env",
       Cmd: ["/bin/bash"],
       Tty: true,
       OpenStdin: true,
@@ -32,7 +32,6 @@ export const containerService = {
 
     await container.start();
 
-    // bootstrap sandbox user & workspace
     const exec = await container.exec({
       Cmd: [
         "bash",

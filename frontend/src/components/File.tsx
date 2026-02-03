@@ -1,25 +1,29 @@
 import Editor from "@monaco-editor/react";
-import { useEffect, useState } from "react";
 import { useFileContext } from "../context/FileContext";
 import FileBar from "./ui/FileBar";
 import { getMonacoLanguageFromFileName } from "../utils/lang";
+import { useCodeContext } from "../context/CodeContext";
+import { debounce } from "../utils/debounce";
+import { useCallback } from "react";
 
 function CodeEditor() {
-  const [code, setCode] = useState("");
+  const { getFileCode, updateFileContent } = useCodeContext();
   const { currentOpenFile } = useFileContext();
 
-  function handleEditorChange(value: string | undefined) {
-    console.log("here is the current model value:", value);
-    setCode(value || "");
-  }
+  const debouncedSave = useCallback(
+    debounce((name: string, path: string, content: string) => {
+      updateFileContent(name, path, content);
+    }, 1000),
+    [],
+  );
 
-  useEffect(() => {
-    console.log(currentOpenFile);
-    console.log(
-      "laungauge",
-      getMonacoLanguageFromFileName(currentOpenFile?.name ?? ""),
+  function handleEditorChange(value: string | undefined) {
+    debouncedSave(
+      currentOpenFile?.name!,
+      currentOpenFile?.path!,
+      value || "",
     );
-  }, [currentOpenFile]);
+  }
 
   return (
     <div className="flex flex-col h-full w-full bg-[#1e1e1e]">
@@ -33,7 +37,7 @@ function CodeEditor() {
             language={getMonacoLanguageFromFileName(currentOpenFile?.name!)}
             theme="vs-dark"
             defaultValue="// Write your code here..."
-            value={code}
+            value={getFileCode(currentOpenFile?.name!, currentOpenFile?.path!)}
             onChange={handleEditorChange}
             options={{
               minimap: { enabled: false },
@@ -51,7 +55,6 @@ function CodeEditor() {
       ) : (
         <div className="flex-1 flex items-center justify-center bg-[#1e1e1e] text-[#d4d4d4]">
           <div className="max-w-xl w-full text-left space-y-6 font-mono">
-            {/* Title */}
             <h1 className="text-3xl font-semibold text-white text-center">
               Welcome to Code Runner
             </h1>
@@ -62,7 +65,6 @@ function CodeEditor() {
 
             <div className="border-t border-gray-700 my-4" />
 
-            {/* Arrow Guide */}
             <div className="space-y-4 text-sm">
               <div className="flex items-start gap-3">
                 <span className="text-green-400">➜</span>
@@ -89,7 +91,6 @@ function CodeEditor() {
               </div>
             </div>
 
-            {/* Footer Hint */}
             <div className="pt-6 text-xs text-gray-500 text-center">
               → Minimal UI. Maximum focus.
             </div>

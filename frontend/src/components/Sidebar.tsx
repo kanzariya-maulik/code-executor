@@ -12,6 +12,7 @@ const Sidebar: React.FC = () => {
   const { setOpenFiles, setCurrentOpenFile } = useFileContext();
   const [selectedFolder, setSelectedFolder] = useState<FileTreeNode | "">("");
   const [createType, setCreateType] = useState<"file" | "folder" | null>(null);
+  
   const [takeName, setTakeName] = useState(false);
   const [fileNameInput, setFileNameInput] = useState("");
 
