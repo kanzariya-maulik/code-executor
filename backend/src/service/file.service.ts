@@ -142,21 +142,24 @@ export const fileService = {
     validate(dir, name);
 
     const exec = await container.exec({
-      Cmd: ["bash", "-c", `cat /sandbox/${dir}/${name}`],
+      Cmd: ["bash", "-c", `cat /sandbox/${dir}`],
       AttachStdout: true,
       AttachStderr: true,
     });
 
     const stream = await exec.start({ hijack: true });
 
-    let data = "";
-    stream.on("data", (chunk) => {
-      data += chunk.toString("utf8");
-    });
+    let stdout = "";
+    let stderr = "";
 
-    return await new Promise<string>((resolve, reject) => {
-      stream.on("end", () => resolve(data));
-      stream.on("error", reject);
-    });
+    container.modem.demuxStream(
+      stream,
+      { write: (c: Buffer) => (stdout += c.toString()) },
+      { write: (c: Buffer) => (stderr += c.toString()) },
+    );
+
+    await new Promise((res) => stream.on("end", res));
+    if (stderr) throw new Error(stderr);
+    return stdout.trim();
   },
 };

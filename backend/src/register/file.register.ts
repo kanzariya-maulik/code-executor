@@ -28,14 +28,15 @@ export const fileRegister = (socket: Socket, container: Container) => {
   });
 
   socket.on("files:update", async (d) => {
+    console.log("updating", d);
     await fileService.updateFile(container, d.path, d.name, d.content);
-    socket.emit("files:list", await fileService.getTree(container));
   });
 
   socket.on("files:get-content", async (d) => {
-    socket.emit(
-      "files:get-content",
-      await fileService.getFileContent(container, d.path, d.name),
-    );
+    socket.emit("files:get-content", {
+      name: d.name,
+      path: d.path,
+      content: await fileService.getFileContent(container, d.path, d.name),
+    });
   });
 };
