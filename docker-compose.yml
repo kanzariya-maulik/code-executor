@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - sandbox-net
+    environment:
+      - NODE_ENV=development
+
+networks:
+  sandbox-net:
+    name: sandbox-net
+    driver: bridge

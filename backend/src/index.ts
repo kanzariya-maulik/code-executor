@@ -7,6 +7,7 @@ import cors from "cors";
 import { containerService } from "./service/container.service.js";
 import { fileRegister } from "./register/file.register.js";
 import { terminalRegister } from "./register/terminal.register.js";
+import { proxyMiddleware } from "./proxy/proxy.js";
 
 const app = express();
 const PORT = 3000;
@@ -14,9 +15,7 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+app.use("/app-runner-port/:containerId/:port", proxyMiddleware);
 
 const server = http.createServer(app);
 const io = new Server(server, {

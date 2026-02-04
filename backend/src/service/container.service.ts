@@ -25,7 +25,7 @@ export const containerService = {
         Memory: 512 * 1024 * 1024,
         NanoCpus: 1e9,
         PidsLimit: 64,
-        NetworkMode: "bridge",
+        NetworkMode: "sandbox-net",
         AutoRemove: false,
       },
     });
@@ -57,5 +57,15 @@ export const containerService = {
       await container.stop();
     } catch {}
     await container.remove({ force: true });
+  },
+
+  async getContainerIP(containerId: string) {
+    const container = docker.getContainer(containerId);
+    const data = await container.inspect();
+    const network = data.NetworkSettings.Networks["sandbox-net"];
+    if (!network) {
+      throw new Error("Container is not connected to the sandbox-net network");
+    }
+    return network.IPAddress;
   },
 };
