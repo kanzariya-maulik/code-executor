@@ -6,6 +6,7 @@ import cors from "cors";
 import { containerService } from "./service/container.service.js";
 import { fileRegister } from "./register/file.register.js";
 import { terminalRegister } from "./register/terminal.register.js";
+import { proxyMiddleware } from "./proxy/proxy.js";
 
 const app = express();
 const PORT = 3000;
