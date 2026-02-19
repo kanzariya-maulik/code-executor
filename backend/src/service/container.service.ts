@@ -25,7 +25,7 @@ export const containerService = {
         Memory: 512 * 1024 * 1024,
         NanoCpus: 1e9,
         PidsLimit: 64,
-        NetworkMode: "bridge",
+        NetworkMode: "app-network",
         AutoRemove: false,
       },
     });
@@ -57,5 +57,9 @@ export const containerService = {
       await container.stop();
     } catch {}
     await container.remove({ force: true });
+  },
+
+  async ping() {
+    return await docker.ping();
   },
 };

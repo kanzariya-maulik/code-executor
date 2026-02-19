@@ -1,5 +1,4 @@
 import express from "express";
-import { spawn } from "child_process";
 import { Server } from "socket.io";
 import type { Socket } from "socket.io";
 import http from "http";
@@ -13,10 +12,6 @@ const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -41,14 +36,15 @@ io.on("connection", async (socket: Socket) => {
   });
 });
 
-spawn("docker", ["--version"]).on("close", (code) => {
-  if (code !== 0) {
-    console.error(
-      "Docker CLI not found or failed to execute. Ensure Docker is installed in the container.",
-    );
+containerService
+  .ping()
+  .then(() => {
+    console.log("Found docker running containers");
+  })
+  .catch((err) => {
+    console.log(err);
     process.exit(1);
-  }
-});
+  });
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

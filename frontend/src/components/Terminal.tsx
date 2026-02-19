@@ -18,6 +18,7 @@ export default function TerminalPanel() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalsRef = useRef<Map<string, TermInstance>>(new Map());
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const [terminalIds, setTerminalIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export default function TerminalPanel() {
 
       socket.on(`output-${id}`, (data: string) => {
         terminalsRef.current.get(id)?.term.write(data);
+        scrollRef.current?.scrollIntoView({ behavior: "smooth" });
       });
     });
 
@@ -186,8 +188,9 @@ export default function TerminalPanel() {
 
       <div
         ref={containerRef}
-        className="flex-1 relative bg-[#1e1e1e] p-2 pl-4"
+        className="flex-1 relative bg-[#1e1e1e] p-2 pl-4 h-full overflow-y-auto scroll-m-0"
       />
+      <div ref={scrollRef}></div>
     </div>
   );
 }
