@@ -1,5 +1,10 @@
 version: "3.8"
 
+networks:
+  sandbox-net:
+    name: sandbox-net
+    driver: bridge
+
 services:
   backend:
     build:
@@ -16,7 +21,26 @@ services:
     environment:
       - NODE_ENV=development
 
-networks:
-  sandbox-net:
-    name: sandbox-net
-    driver: bridge
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - sandbox-net
+    environment:
+      - NODE_ENV=development
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    networks:
+      - sandbox-net
+    environment:
+      - NODE_ENV=development

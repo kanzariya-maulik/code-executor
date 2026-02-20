@@ -6,7 +6,6 @@ import cors from "cors";
 import { containerService } from "./service/container.service.js";
 import { fileRegister } from "./register/file.register.js";
 import { terminalRegister } from "./register/terminal.register.js";
-import { proxyMiddleware } from "./proxy/proxy.js";
 
 const app = express();
 const PORT = 3000;
@@ -17,9 +16,8 @@ app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true,
   },
 });
 
@@ -28,8 +26,13 @@ io.on("connection", async (socket: Socket) => {
 
   const container = await containerService.create();
 
-  fileRegister(socket, container);
-  terminalRegister(socket, container);
+  try {
+    fileRegister(socket, container);
+    terminalRegister(socket, container);
+  } catch (error) {
+    socket.emit("error", error);
+    console.log(error);
+  }
 
   socket.on("disconnect", () => {
     console.log("user disconnected", socket.id);

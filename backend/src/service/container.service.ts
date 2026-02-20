@@ -12,50 +12,58 @@ async function waitForExec(exec: Docker.Exec): Promise<void> {
 
 export const containerService = {
   async create(): Promise<Container> {
-    const container = await docker.createContainer({
-      Image: "code-runner-env",
-      Cmd: ["/bin/bash"],
-      Tty: true,
-      OpenStdin: true,
-      User: "root",
+    try {
+      const container = await docker.createContainer({
+        Image: "code-runner-env",
+        Cmd: ["/bin/bash"],
+        Tty: true,
+        OpenStdin: true,
+        User: "root",
 
-      Env: ["HOME=/home/sandbox", "TERM=xterm-256color"],
+        Env: ["HOME=/home/sandbox", "TERM=xterm-256color"],
 
-      HostConfig: {
-        Memory: 512 * 1024 * 1024,
-        NanoCpus: 1e9,
-        PidsLimit: 64,
-        NetworkMode: "app-network",
-        AutoRemove: false,
-      },
-    });
+        HostConfig: {
+          Memory: 512 * 1024 * 1024,
+          NanoCpus: 1e9,
+          PidsLimit: 64,
+          NetworkMode: "sandbox-net",
+          AutoRemove: false,
+        },
+      });
 
-    await container.start();
+      await container.start();
 
-    const exec = await container.exec({
-      Cmd: [
-        "bash",
-        "-c",
-        `
+      const exec = await container.exec({
+        Cmd: [
+          "bash",
+          "-c",
+          `
         id sandbox 2>/dev/null || useradd -m sandbox
         mkdir -p /sandbox
         chown -R sandbox:sandbox /sandbox
         echo 'cd /sandbox' >> /home/sandbox/.bashrc
         `,
-      ],
-      User: "root",
-      AttachStdout: true,
-      AttachStderr: true,
-    });
+        ],
+        User: "root",
+        AttachStdout: true,
+        AttachStderr: true,
+      });
 
-    await waitForExec(exec);
-    return container;
+      await waitForExec(exec);
+      return container;
+    } catch (error) {
+      console.log(error);
+      throw new Error((error as Error).message);
+    }
   },
 
   async remove(container: Container) {
     try {
       await container.stop();
-    } catch {}
+    } catch (error) {
+      console.log(error);
+      throw new Error((error as Error).message);
+    }
     await container.remove({ force: true });
   },
 

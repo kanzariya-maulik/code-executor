@@ -8,12 +8,17 @@ const terminals = new Map<string, Terminal>();
 export const terminalRegister = (socket: Socket, container: Container) => {
   socket.on("terminal:create", async ({ id }) => {
     console.log("GOT TERMINAL CREATE REQUEST");
-    const terminal = await terminalService.create(container, id);
-    terminals.set(id, terminal);
+    try {
+      const terminal = await terminalService.create(container, id);
+      terminals.set(id, terminal);
 
-    terminal.stream.on("data", (data) => {
-      socket.emit(`output-${id}`, data.toString());
-    });
+      terminal.stream.on("data", (data) => {
+        socket.emit(`output-${id}`, data.toString());
+      });
+    } catch (error) {
+      console.log(error);
+      throw new Error((error as Error).message);
+    }
 
     socket.emit("terminal:create", { id });
   });
@@ -29,7 +34,12 @@ export const terminalRegister = (socket: Socket, container: Container) => {
     const t = terminals.get(id);
     if (!t) return;
 
-    commandService.executeCommand(t.stream, command);
+    try {
+      commandService.executeCommand(t.stream, command);
+    } catch (error) {
+      console.log(error);
+      throw new Error((error as Error).message);
+    }
   });
 
   socket.on("disconnect", () => {
