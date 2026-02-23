@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   backend:
     command: npm run dev
@@ -21,3 +19,21 @@ services:
     ports:
       - "5274:5173"
     command: npm run dev -- --host
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    networks:
+      - sandbox-net
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8g
+    restart: unless-stopped
+
+  auto-complete:
+    image: imageName
