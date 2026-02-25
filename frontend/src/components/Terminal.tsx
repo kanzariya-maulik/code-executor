@@ -4,6 +4,13 @@ import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { useSocketContext } from "../hooks/useSocket";
 import { useTerminal } from "../services/terminal.service";
+import {
+  Plus,
+  X,
+  Trash2,
+  SplitSquareHorizontal,
+  ChevronUp,
+} from "lucide-react";
 
 interface TermInstance {
   id: string;
@@ -120,62 +127,62 @@ export default function TerminalPanel() {
 
         <div className="flex items-center ml-4 gap-2 border-l border-[#2b2b2b] pl-2">
           {terminalIds.map((id) => (
-            <button
+            <div
               key={id}
               onClick={() => setActiveId(id)}
               className={`
-                flex items-center gap-2 px-3 py-1 rounded-sm text-xs transition-colors
+                flex items-center gap-2 px-3 py-1 rounded-sm text-xs transition-colors cursor-pointer border border-transparent
                 ${
                   activeId === id
-                    ? "bg-[#3c3c3c] text-white shadow-sm"
-                    : "text-white/50 hover:bg-[#2a2d2e] hover:text-white"
+                    ? "bg-[#3c3c3c] text-white shadow-sm border-[#444444]"
+                    : "text-[#858585] hover:bg-[#2a2d2e] hover:text-[#cccccc]"
                 }
               `}
             >
               <span className="truncate max-w-[80px]">bash</span>
               {terminalIds.length > 1 && (
                 <button
-                  className="text-white/50 hover:text-white p-1"
-                  onClick={() => {
+                  className="text-[#858585] hover:text-white p-0.5 rounded hover:bg-[#4a4d4e] transition-colors flex items-center justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
                     closeTerminal({ id });
                     setActiveId(null);
                     setTerminalIds((prev) => prev.filter((t) => t !== id));
                   }}
                 >
-                  X
+                  <X size={12} />
                 </button>
               )}
-            </button>
+            </div>
           ))}
 
           <button
             onClick={addTerminal}
-            className="flex items-center justify-center p-1 rounded-sm text-white/50 hover:text-white hover:bg-[#3c3c3c] transition-colors"
+            className="flex items-center justify-center p-1 rounded-sm text-[#858585] hover:text-[#cccccc] hover:bg-[#3c3c3c] transition-colors"
             title="New Terminal"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M14 7v1H8v6H7V8H1V7h6V1h1v6h6z" />
-            </svg>
+            <Plus size={14} />
           </button>
         </div>
 
-        <div className="ml-auto flex items-center pr-2 gap-2 text-white/50">
-          <button className="hover:text-white p-1">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M14.5 3H1.5l.5.5v9l-.5.5h13l-.5-.5v-9l.5-.5zM13 12H3V4h10v8z" />
-              <path d="M4 5h8v1H4V5zm0 2h8v1H4V7z" />
-            </svg>
+        <div className="ml-auto flex items-center pr-4 gap-3 text-[#858585]">
+          <button
+            className="hover:text-[#cccccc] transition-colors"
+            title="Split Terminal"
+          >
+            <SplitSquareHorizontal size={14} />
           </button>
-          <button className="hover:text-white p-1">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M3.5 8.49L7 12l3.49-3.51-.7-.7L7.5 10.08V1h-1v9.08L4.21 7.79l-.71.7z" />
-              <path d="M13 13H3v1h10v-1z" />
-            </svg>
+          <button
+            className="hover:text-[#cccccc] transition-colors"
+            title="Kill Terminal"
+          >
+            <Trash2 size={14} />
           </button>
-          <button className="hover:text-white p-1">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M14.7 1.3L13.3 0 7.3 6 1.3 0 0 1.3 6 7.3 0 13.3 1.3 14.7 7.3 8.7l6 6 1.3-1.3-6-6z" />
-            </svg>
+          <button
+            className="hover:text-[#cccccc] transition-colors"
+            title="Maximize Panel"
+          >
+            <ChevronUp size={14} />
           </button>
         </div>
       </div>

@@ -35,5 +35,13 @@ services:
           memory: 8g
     restart: unless-stopped
 
-  auto-complete:
-    image: imageName
+  suggestions:
+    build:
+      context: ./auto-complete
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    networks:
+      - sandbox-net
+    environment:
+      - OLLAMA_HOST=https://ollama.com

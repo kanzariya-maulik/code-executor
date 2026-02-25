@@ -1,71 +1,77 @@
 @import "tailwindcss";
 
-:root {
-  /* ===== VS Code Theme Colors (Dark+) ===== */
-  --vscode-bg: #1e1e1e; /* Editor & Terminal background */
-  --vscode-sidebar-bg: #252526; /* Explorer background */
-  --vscode-activity-bar-bg: #333333; /* Activity bar (leftmost) */
-  --vscode-title-bar-bg: #323233; /* App title bar */
-  --vscode-status-bar-bg: #007acc; /* Status bar (blue) */
-  --vscode-panel-border: #2b2b2b; /* Borders between panels */
+@layer base {
+  :root {
+    --bg-primary: #1e1e1e;
+    --text-primary: #cccccc;
+    --accent: #007acc;
+  }
 
-  --vscode-text: #cccccc; /* Default text */
-  --vscode-text-muted: #858585; /* Muted/Labels */
-  --vscode-list-hover: #2a2d2e; /* Sidebar list item hover */
-  --vscode-list-active: #37373d; /* Sidebar list item active */
-  --vscode-list-focus: #094771; /* Sidebar list item focus */
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-  --vscode-tab-inactive-bg: #2d2d2d;
-  --vscode-tab-active-bg: #1e1e1e;
+  * {
+    box-sizing: border-box;
+  }
 
-  /* Retain some functional semantics if needed */
-  --bg-primary: var(--vscode-bg);
-  --text-primary: var(--vscode-text);
-}
+  button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+  }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-family:
-    "Inter",
-    system-ui,
-    -apple-system,
-    sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-}
+  /* Focus visibility */
+  :focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+  }
 
-* {
-  box-sizing: border-box;
-}
+  /* Sleek IDE Scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
 
-/* Buttons */
-button {
-  background: none;
-  border: none;
-  color: inherit;
-  font-family: inherit;
-  cursor: pointer;
-}
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-/* Focus visibility (VERY important) */
-:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
-}
+  ::-webkit-scrollbar-thumb {
+    background: rgba(121, 121, 121, 0.4);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 
-/* Scrollbars (IDE quality) */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 100, 100, 0.7);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: #262626;
-}
+  /* Remove default input styling */
+  input[type="text"] {
+    appearance: none;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #333333;
+  /* Style XTerm.js overrides */
+  .xterm-viewport::-webkit-scrollbar {
+    width: 14px;
+    background-color: #1e1e1e;
+  }
+  .xterm-viewport::-webkit-scrollbar-thumb {
+    background: rgba(121, 121, 121, 0.4);
+  }
 }

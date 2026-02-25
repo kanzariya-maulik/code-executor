@@ -3,12 +3,14 @@ import { useFileContext } from "../context/FileContext";
 import FileBar from "./ui/FileBar";
 import { getMonacoLanguageFromFileName } from "../utils/lang";
 import { useCodeContext } from "../context/CodeContext";
+import { useSettings } from "../context/SettingsContext";
 import { debounce } from "../utils/debounce";
 import { useCallback, useEffect, useRef } from "react";
 
 function CodeEditor() {
   const { getFileCode, updateFileContent } = useCodeContext();
   const { currentOpenFile } = useFileContext();
+  const { selectedModel } = useSettings();
   const monaco = useMonaco();
   const providerRef = useRef<any>(null);
 
@@ -40,11 +42,9 @@ function CodeEditor() {
             _context,
             token,
           ) => {
-            console.log("Auto-complete triggered! Waiting for 10 seconds...");
-            // Wait for 10 seconds (10000ms) before fetching
-            await new Promise((resolve) => setTimeout(resolve, 10000));
+            console.log("Auto-complete triggered! Waiting for 1 second...");
+            await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            // If the user typed something else while waiting, abort
             if (token.isCancellationRequested) {
               console.log(
                 "Auto-complete aborted because user typed something else.",
@@ -52,7 +52,7 @@ function CodeEditor() {
               return { items: [] };
             }
 
-            console.log("10 seconds passed! Fetching code up to cursor...");
+            console.log("1 second passed! Fetching code around cursor...");
             const codeUpToCursor = model.getValueInRange({
               startLineNumber: 1,
               startColumn: 1,
@@ -60,16 +60,28 @@ function CodeEditor() {
               endColumn: position.column,
             });
 
+            const codeAfterCursor = model.getValueInRange({
+              startLineNumber: position.lineNumber,
+              startColumn: position.column,
+              endLineNumber: model.getLineCount(),
+              endColumn: model.getLineMaxColumn(model.getLineCount()),
+            });
+
             console.log("Code up to cursor length:", codeUpToCursor.length);
 
             try {
               console.log("Sending request to suggestions backend...");
-              const res = await fetch("http://localhost:3002/suggestions", {
+              const res = await fetch("http://localhost:3000/suggestions", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ currentCode: codeUpToCursor }),
+                body: JSON.stringify({
+                  currentCode: codeUpToCursor,
+                  codeAfter: codeAfterCursor,
+                  modelName: selectedModel,
+                  language: getMonacoLanguageFromFileName(currentOpenFile.name),
+                }),
               });
 
               if (!res.ok) {
@@ -89,12 +101,12 @@ function CodeEditor() {
                   items: [
                     {
                       insertText: data.suggestion,
-                      range: new monaco.Range(
-                        position.lineNumber,
-                        position.column,
-                        position.lineNumber,
-                        position.column,
-                      ),
+                      range: {
+                        startLineNumber: position.lineNumber,
+                        startColumn: position.column,
+                        endLineNumber: position.lineNumber,
+                        endColumn: position.column,
+                      },
                     },
                   ],
                 };
@@ -148,47 +160,26 @@ function CodeEditor() {
           />
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center bg-[#1e1e1e] text-[#d4d4d4]">
-          <div className="max-w-xl w-full text-left space-y-6 font-mono">
-            <h1 className="text-3xl font-semibold text-white text-center">
-              Welcome to Code Runner
-            </h1>
-
-            <p className="text-sm text-gray-400 text-center">
-              Your local playground for writing and running code.
-            </p>
-
-            <div className="border-t border-gray-700 my-4" />
-
-            <div className="space-y-4 text-sm">
-              <div className="flex items-start gap-3">
-                <span className="text-green-400">➜</span>
-                <span>
-                  Open or create a file from the{" "}
-                  <span className="text-blue-400">sidebar</span>
-                </span>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="text-green-400">➜</span>
-                <span>
-                  Start typing your code in the{" "}
-                  <span className="text-purple-400">editor</span>
-                </span>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="text-green-400">➜</span>
-                <span>
-                  Run commands in the{" "}
-                  <span className="text-yellow-400">terminal</span> below
-                </span>
-              </div>
-            </div>
-
-            <div className="pt-6 text-xs text-gray-500 text-center">
-              → Minimal UI. Maximum focus.
-            </div>
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#1e1e1e] text-[#858585] select-none">
+          <svg
+            className="w-24 h-24 mb-6 opacity-10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+            <polyline points="14 2 14 8 20 8" />
+            <path d="m10 13-2 2 2 2" />
+            <path d="m14 17 2-2-2-2" />
+          </svg>
+          <div className="text-sm font-medium tracking-wide">EXEC RUNNER</div>
+          <div className="text-xs opacity-60 mt-2 flex items-center gap-4">
+            <span>Cmd+P to Search</span>
+            <span>•</span>
+            <span>Select a file to begin</span>
           </div>
         </div>
       )}

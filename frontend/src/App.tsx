@@ -3,16 +3,20 @@ import { useSocketContext } from "./hooks/useSocket";
 import Sidebar from "./components/Sidebar";
 import TerminalComponent from "./components/Terminal";
 import File from "./components/File";
+import TopBar from "./components/TopBar";
+import SettingsModal from "./components/ui/SettingsModal";
+// @ts-ignore
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 const App: React.FC = () => {
   const { isConnected, isLoading } = useSocketContext();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900 text-white font-medium">
+      <div className="flex items-center justify-center h-screen bg-[#1e1e1e] text-[#cccccc] font-medium">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-400">Loading Environment...</p>
+          <div className="w-8 h-8 border-4 border-[#007acc] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-[#858585]">Starting Workspace...</p>
         </div>
       </div>
     );
@@ -20,18 +24,20 @@ const App: React.FC = () => {
 
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900 text-white font-medium">
-        <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700 max-w-md text-center">
-          <h1 className="text-2xl font-bold mb-2">Connection Failed</h1>
-          <p className="text-slate-400 mb-6">
-            Could not establish a connection to the server. Please ensure the
-            backend is running on port 3000.
+      <div className="flex items-center justify-center h-screen bg-[#1e1e1e] text-[#cccccc] font-medium">
+        <div className="bg-[#252526] p-8 rounded border border-[#2b2b2b] max-w-md text-center shadow-lg">
+          <h1 className="text-xl font-medium text-white mb-2">
+            Connection Lost
+          </h1>
+          <p className="text-[#858585] mb-6 text-sm">
+            Could not establish a connection to the runner server. Ensure the
+            backend container is running.
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-sky-600 hover:bg-sky-500 transition-colors rounded-lg font-semibold"
+            className="px-6 py-2 bg-[#007acc] hover:bg-[#0098ff] transition-colors rounded text-white text-sm"
           >
-            Retry Connection
+            Reconnect
           </button>
         </div>
       </div>
@@ -39,18 +45,54 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-slate-900 text-slate-200 overflow-hidden">
-      <div className="w-auto border-r border-[#2b2b2b] bg-[#252526] flex-shrink-0">
-        <Sidebar />
-      </div>
+    <div className="flex flex-col h-screen w-screen bg-[#1e1e1e] text-[#cccccc] overflow-hidden font-sans">
+      <TopBar />
+      <SettingsModal />
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <div className="flex-1 min-h-0 bg-slate-900">
-          <File />
-        </div>
-        <div className="h-1/3 min-h-[200px] border-t border-slate-800 flex flex-col">
-          <TerminalComponent />
-        </div>
+      <div className="flex flex-1 min-h-0">
+        <PanelGroup direction="horizontal">
+          <Panel
+            defaultSize={20}
+            minSize={15}
+            maxSize={40}
+            className="flex flex-col border-r border-[#2b2b2b] bg-[#252526]"
+          >
+            <Sidebar />
+          </Panel>
+
+          <PanelResizeHandle className="w-1 bg-transparent hover:bg-[#007acc] transition-colors cursor-col-resize z-50" />
+
+          <Panel className="flex flex-col min-w-0 bg-[#1e1e1e]">
+            <PanelGroup direction="vertical">
+              <Panel
+                defaultSize={70}
+                minSize={20}
+                className="flex flex-col relative min-h-0"
+              >
+                <File />
+              </Panel>
+
+              <PanelResizeHandle className="h-1 bg-transparent hover:bg-[#007acc] transition-colors cursor-row-resize z-50 relative" />
+
+              <Panel
+                defaultSize={30}
+                minSize={10}
+                className="flex flex-col min-h-0 bg-[#1e1e1e] border-t border-[#2b2b2b]"
+              >
+                {/* Terminal Panel Header */}
+                <div className="flex items-center px-4 h-9 border-b border-[#2b2b2b] bg-[#1e1e1e] shrink-0">
+                  <div className="text-[11px] uppercase tracking-wider font-medium text-[#cccccc] border-b border-[#007acc] h-full flex items-center cursor-pointer">
+                    TERMINAL
+                  </div>
+                </div>
+                {/* Terminal Content Box */}
+                <div className="flex-1 min-h-0 relative p-2">
+                  <TerminalComponent />
+                </div>
+              </Panel>
+            </PanelGroup>
+          </Panel>
+        </PanelGroup>
       </div>
     </div>
   );

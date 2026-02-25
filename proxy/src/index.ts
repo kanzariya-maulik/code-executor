@@ -1,131 +1,165 @@
-import express from "express";
+import express, { type Response } from "express";
 import Docker from "dockerode";
-import { createProxyMiddleware } from "http-proxy-middleware";
+import { createProxyMiddleware, type Options } from "http-proxy-middleware";
 import cookieParser from "cookie-parser";
+import http from "http";
 
 const docker = new Docker();
 const app = express();
 const PORT = 3001;
 
-app.use(express.json());
 app.use(cookieParser());
 
-app.get("/api/info/:containerId/:port", async (req, res) => {
-  const { containerId, port } = req.params;
+async function getTargetInfo(
+  containerId: string,
+  port: string,
+): Promise<string | null> {
   try {
     const container = docker.getContainer(containerId);
+    if (!container) return null;
     const data = await container.inspect();
     const networks = data.NetworkSettings.Networks;
     const containerIP = Object.values(networks)[0]?.IPAddress;
-    if (!containerIP) {
-      res.status(404).json({ error: "Container has no IP address" });
-      return;
-    }
-    res.json({
-      containerId,
-      port,
-      containerIP,
-      url: `http://localhost:3001/proxy/${containerId}/${port}/`,
-    });
+    return containerIP ? `http://${containerIP}:${port}` : null;
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Container not found or Docker error" });
+    console.error(`Error looking up container ${containerId}:`, err);
+    return null;
   }
+}
+
+const proxyOptions: Options = {
+  target: "http://localhost:1", //fallback
+  router: (req) => (req as any).proxyTarget,
+  changeOrigin: true,
+  selfHandleResponse: true,
+  on: {
+    proxyRes: (proxyRes, req, res) => {
+      const target = (req as any).proxyTargetInfo;
+      const contentType = proxyRes.headers["content-type"];
+
+      if (contentType && contentType.includes("text/html") && target) {
+        const { containerId, port } = target;
+        const bodyChunks: any[] = [];
+        proxyRes.on("data", (chunk) => bodyChunks.push(chunk));
+        proxyRes.on("end", () => {
+          const body = Buffer.concat(bodyChunks).toString();
+          if (body.includes("<base") || body.includes("<BASE")) {
+            res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+            res.end(body);
+            return;
+          }
+
+          const baseTag = `<base href="/proxy/${containerId}/${port}/">`;
+          const modifiedBody = body.includes("<head>")
+            ? body.replace("<head>", `<head>\n    ${baseTag}`)
+            : body.includes("<html>")
+              ? body.replace("<html>", `<html>\n<head>${baseTag}</head>`)
+              : `${baseTag}${body}`;
+
+          res.setHeader("content-type", "text/html");
+          res.setHeader("content-length", Buffer.byteLength(modifiedBody));
+          res.writeHead(proxyRes.statusCode || 200);
+          res.end(modifiedBody);
+        });
+      } else {
+        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+        proxyRes.pipe(res);
+      }
+    },
+    error: (err, req, res) => {
+      console.error("Proxy error:", err.message);
+      if (res && "headersSent" in res && !res.headersSent) {
+        res.writeHead(502, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({ error: "Bad gateway — container unreachable" }),
+        );
+      } else if (res && !("headersSent" in res)) {
+        (res as any).destroy();
+      }
+    },
+  },
+};
+
+const proxyMiddleware = createProxyMiddleware(proxyOptions);
+
+app.get("/api/info/:containerId/:port", async (req, res) => {
+  const { containerId, port } = req.params;
+  const targetUrl = await getTargetInfo(containerId, port);
+  if (!targetUrl) {
+    res.status(404).json({ error: "Container not found or unreachable" });
+    return;
+  }
+  const parts = targetUrl.split("//")[1]?.split(":");
+  const containerIP = parts ? parts[0] : "";
+  res.json({
+    containerId,
+    port,
+    containerIP,
+    url: `http://localhost:3001/proxy/${containerId}/${port}/`,
+  });
 });
 
 app.use(
   "/proxy/:containerId/:port",
   async (req, res, next) => {
     const { containerId, port } = req.params;
-    // Set sticky session cookie
     res.cookie("proxy-target", `${containerId}:${port}`, { path: "/" });
 
-    try {
-      const container = docker.getContainer(containerId);
-
-      if (!container) {
-        res.status(404).json({ error: "Container not found" });
-      }
-
-      const data = await container.inspect();
-      const networks = data.NetworkSettings.Networks;
-      const containerIP = Object.values(networks)[0]?.IPAddress;
-      if (!containerIP) {
-        res.status(404).json({ error: "Container has no IP address" });
-        return;
-      }
-      (req as any).proxyTarget = `http://${containerIP}:${port}`;
-      next();
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Container lookup failed" });
+    const targetUrl = await getTargetInfo(containerId, port);
+    if (!targetUrl) {
+      res.status(404).json({ error: "Container unreachable" });
+      return;
     }
+
+    (req as any).proxyTargetInfo = { containerId, port };
+    (req as any).proxyTarget = targetUrl;
+    next();
   },
-  createProxyMiddleware({
-    router: (req) => (req as any).proxyTarget,
-    changeOrigin: true,
-    selfHandleResponse: true,
-    on: {
-      proxyRes: (proxyRes, req, res) => {
-        const { containerId, port } = (req as any).params;
-        const contentType = proxyRes.headers["content-type"];
-
-        if (contentType && contentType.includes("text/html")) {
-          const bodyChunks: any[] = [];
-          proxyRes.on("data", (chunk) => bodyChunks.push(chunk));
-          proxyRes.on("end", () => {
-            const body = Buffer.concat(bodyChunks).toString();
-            const baseTag = `<base href="/proxy/${containerId}/${port}/">`;
-            const modifiedBody = body.includes("<head>")
-              ? body.replace("<head>", `<head>\n    ${baseTag}`)
-              : body.includes("<html>")
-                ? body.replace("<html>", `<html>\n<head>${baseTag}</head>`)
-                : `${baseTag}${body}`;
-
-            res.setHeader("content-type", "text/html");
-            res.setHeader("content-length", Buffer.byteLength(modifiedBody));
-            res.status(proxyRes.statusCode || 200).end(modifiedBody);
-          });
-        } else {
-          // Fix: Ensure status and headers are passed through
-          res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-          proxyRes.pipe(res);
-        }
-      },
-      error: (err, req, res) => {
-        console.error("Proxy error:", err.message);
-        (res as any)
-          .status(502)
-          .json({ error: "Bad gateway — container port unreachable" });
-      },
-    },
-  }),
+  proxyMiddleware,
 );
 
-// Fallback for requests without /proxy/ prefix (sticky sessions)
 app.use(async (req, res, next) => {
   const target = req.cookies["proxy-target"];
   if (target) {
     const [containerId, port] = target.split(":");
-    try {
-      const container = docker.getContainer(containerId);
-      const data = await container.inspect();
-      const networks = data.NetworkSettings.Networks;
-      const containerIP = Object.values(networks)[0]?.IPAddress;
-
-      if (containerIP) {
-        return createProxyMiddleware({
-          target: `http://${containerIP}:${port}`,
-          changeOrigin: true,
-        })(req, res, next);
-      }
-    } catch (err) {
-      // Ignore errors for non-existent containers
+    const targetUrl = await getTargetInfo(containerId || "", port || "");
+    if (targetUrl) {
+      (req as any).proxyTargetInfo = { containerId, port };
+      (req as any).proxyTarget = targetUrl;
+      return (proxyMiddleware as any)(req, res, next);
     }
   }
   next();
 });
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+server.setMaxListeners(20);
+
+server.on("upgrade", async (req, socket, head) => {
+  const cookies = (req.headers.cookie || "") as string;
+  const targetCookie = cookies
+    .split(";")
+    .find((c) => c.trim().startsWith("proxy-target="))
+    ?.split("=")[1];
+
+  if (targetCookie) {
+    const [containerId, port] = targetCookie.split(":");
+    const targetUrl = await getTargetInfo(containerId || "", port || "");
+
+    if (targetUrl) {
+      const wsProxy = createProxyMiddleware({
+        target: targetUrl,
+        ws: true,
+        changeOrigin: true,
+      });
+      (wsProxy as any).upgrade(req, socket, head);
+      return;
+    }
+  }
+  socket.destroy();
+});
+
+server.listen(PORT, () => {
   console.log(`Proxy server running on port ${PORT}`);
 });

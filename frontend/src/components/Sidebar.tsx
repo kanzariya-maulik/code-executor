@@ -3,16 +3,30 @@ import { useCallback, useEffect, useState } from "react";
 import type { FileTree, FileTreeNode } from "../types";
 import { useFile } from "../services/files.service";
 import FileTreeView from "./ui/FileTree";
+import ChatPanel from "./ui/ChatPanel";
 import { useFileContext } from "../context/FileContext";
+import { useSettings } from "../context/SettingsContext";
+import {
+  Files,
+  Search,
+  Settings,
+  FilePlus,
+  FolderPlus,
+  RefreshCw,
+  ChevronDown,
+  MessageSquare,
+} from "lucide-react";
 
 const Sidebar: React.FC = () => {
-  const [files, setFiles] = useState<FileTree>({});
+  const { fileTree: files, setFileTree: setFiles } = useFileContext();
+  const { setIsSettingsOpen } = useSettings();
   const { socket } = useSocketContext();
   const { listFiles, createFile, createFolder } = useFile();
   const { setOpenFiles, setCurrentOpenFile } = useFileContext();
+  const [activeView, setActiveView] = useState<"explorer" | "chat">("explorer");
   const [selectedFolder, setSelectedFolder] = useState<FileTreeNode | "">("");
   const [createType, setCreateType] = useState<"file" | "folder" | null>(null);
-  
+
   const [takeName, setTakeName] = useState(false);
   const [fileNameInput, setFileNameInput] = useState("");
 
@@ -48,7 +62,7 @@ const Sidebar: React.FC = () => {
         : "",
       name: fileNameInput,
     });
-  }, [fileNameInput]);
+  }, [fileNameInput, selectedFolder, createFile]);
 
   const createFolderHandler = useCallback(() => {
     createFolder({
@@ -59,157 +73,163 @@ const Sidebar: React.FC = () => {
         : "",
       name: fileNameInput,
     });
-  }, [fileNameInput]);
+  }, [fileNameInput, selectedFolder, createFolder]);
 
   return (
-    <div className="flex h-full text-white select-none">
-      <div className="w-[48px] flex-shrink-0 flex flex-col items-center py-2 bg-[var(--vscode-activity-bar-bg)] border-r border-[#1e1e1e]">
-        <div className="p-3 mb-2 cursor-pointer border-l-2 border-white opacity-100">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+    <div className="flex h-full text-[#cccccc] select-none bg-[#1e1e1e]">
+      {/* Activity Bar (Leftmost thin strip) */}
+      <div className="w-[48px] flex-shrink-0 flex flex-col items-center py-3 bg-[#333333] border-r border-[#2b2b2b] justify-between">
+        <div className="flex flex-col w-full items-center gap-4">
+          <div
+            onClick={() => setActiveView("explorer")}
+            className={`w-full flex justify-center py-2 cursor-pointer border-l-[3px] relative left-[1.5px] transition-colors ${
+              activeView === "explorer"
+                ? "border-white text-white"
+                : "border-transparent text-[#858585] hover:text-white"
+            }`}
           >
-            <path
-              d="M13 9V3.5L18.5 9M6 2C4.89 2 4 2.89 4 4V20C4 21.1 5 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2H6Z"
-              stroke="#cccccc"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+            <Files size={24} strokeWidth={1.5} />
+          </div>
+          <div
+            onClick={() => setActiveView("chat")}
+            className={`w-full flex justify-center py-2 cursor-pointer border-l-[3px] relative left-[1.5px] transition-colors ${
+              activeView === "chat"
+                ? "border-white text-white"
+                : "border-transparent text-[#858585] hover:text-white"
+            }`}
+          >
+            <MessageSquare size={22} strokeWidth={1.5} />
+          </div>
+          <div className="w-full flex justify-center py-2 cursor-pointer border-l-[3px] border-transparent text-[#858585] hover:text-white transition-colors relative left-[1.5px]">
+            <Search size={22} strokeWidth={1.5} />
+          </div>
         </div>
-        <div className="p-3 mb-2 cursor-pointer border-l-2 border-transparent opacity-50 hover:opacity-100 transition-opacity">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#cccccc"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </div>
-        <div className="p-3 mb-2 cursor-pointer border-l-2 border-transparent opacity-50 hover:opacity-100 transition-opacity">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#cccccc"
-            strokeWidth="2"
-          >
-            <line x1="6" y1="3" x2="6" y2="15"></line>
-            <circle cx="18" cy="6" r="3"></circle>
-            <circle cx="6" cy="18" r="3"></circle>
-            <path d="M18 9a9 9 0 0 1-9 9"></path>
-          </svg>
+        <div
+          onClick={() => setIsSettingsOpen(true)}
+          className="w-full flex justify-center py-4 cursor-pointer text-[#858585] hover:text-white transition-colors"
+        >
+          <Settings size={22} strokeWidth={1.5} />
         </div>
       </div>
 
-      <div className="w-64 flex flex-col bg-[var(--vscode-sidebar-bg)] border-r border-[var(--vscode-panel-border)]">
-        <div className="h-9 flex items-center px-4 text-[11px] font-bold tracking-wider text-[var(--vscode-text-muted)] uppercase cursor-default">
-          Explorer
+      <div className="flex-1 min-w-0 flex flex-col bg-[#252526] border-r border-[#2b2b2b] h-full overflow-hidden">
+        <div
+          className={activeView === "chat" ? "flex flex-col h-full" : "hidden"}
+        >
+          <ChatPanel />
         </div>
-        <div className="flex items-center justify-between px-4 py-1 bg-[#37373d] text-white/90 text-[11px] font-bold uppercase cursor-pointer">
-          <div className="flex items-center gap-1">
-            <span className="text-[10px]">▼</span>
-            <span>Project</span>
+        <div
+          className={
+            activeView === "explorer" ? "flex flex-col h-full" : "hidden"
+          }
+        >
+          <div className="h-9 flex items-center px-4 shrink-0 text-[11px] font-bold tracking-wider text-[#cccccc] uppercase cursor-default">
+            Explorer
           </div>
-          <div className="flex gap-2 opacity-100">
-            <button
-              title="New File"
-              onClick={() => {
-                setCreateType("file");
-                setTakeName(true);
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="#cccccc">
-                <path d="M9 1v6h6v1H9v6H8V8H2V7h6V1h1z" />
-              </svg>
-            </button>
-            <button
-              title="New Folder"
-              onClick={() => {
-                setCreateType("folder");
-                setTakeName(true);
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="#cccccc">
-                <path d="M7.5 5l-1-1H2v10h12V5H7.5zM2 4h4.5l1 1H14v10H2V4z" />
-                <path d="M5.5 8h5v1h-5z" />
-              </svg>
-            </button>
-            <button onClick={() => socket?.emit("files:list")} title="Refresh">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="#cccccc">
-                <path d="M4.6 11.4L2.2 9H5v-.9H2.2l2.4-2.4-.6-.7-3.2 3.2 3.2 3.2 .6-.6zm7.4 3.2l.6.7 3.2-3.2-3.2-3.2-.6.7 2.4 2.4H11V13h3.4l-2.4 2.4z" />
-              </svg>
-            </button>
+
+          <div className="flex items-center justify-between px-2 py-1 bg-[#252526] hover:bg-[#2a2d2e] transition-colors text-white font-bold uppercase cursor-pointer group">
+            <div className="flex items-center gap-1">
+              <ChevronDown size={14} className="text-[#cccccc] opacity-80" />
+              <span className="text-[11px] font-bold tracking-wide mt-px">
+                Project
+              </span>
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                title="New File"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCreateType("file");
+                  setTakeName(true);
+                }}
+                className="p-1 hover:bg-[#37373d] rounded text-[#cccccc] hover:text-white"
+              >
+                <FilePlus size={14} />
+              </button>
+              <button
+                title="New Folder"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCreateType("folder");
+                  setTakeName(true);
+                }}
+                className="p-1 hover:bg-[#37373d] rounded text-[#cccccc] hover:text-white"
+              >
+                <FolderPlus size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  socket?.emit("files:list");
+                }}
+                title="Refresh"
+                className="p-1 hover:bg-[#37373d] rounded text-[#cccccc] hover:text-white"
+              >
+                <RefreshCw size={13} />
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden pt-1">
-          {takeName && (
-            <div className="px-4 py-1">
-              <input
-                autoFocus
-                type="text"
-                placeholder={
-                  createType === "file" ? "New File Name" : "New Folder Name"
-                }
-                value={fileNameInput}
-                onChange={(e) => setFileNameInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    if (!fileNameInput.trim()) return;
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-1">
+            {takeName && (
+              <div className="px-4 py-1">
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder={
+                    createType === "file" ? "New File Name" : "New Folder Name"
+                  }
+                  value={fileNameInput}
+                  onChange={(e) => setFileNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (!fileNameInput.trim()) return;
 
-                    if (createType === "file") {
-                      createFileHandler();
-                    } else if (createType === "folder") {
-                      createFolderHandler();
+                      if (createType === "file") {
+                        createFileHandler();
+                      } else if (createType === "folder") {
+                        createFolderHandler();
+                      }
+
+                      setTakeName(false);
+                      setCreateType(null);
+                      setFileNameInput("");
                     }
 
-                    setTakeName(false);
-                    setCreateType(null);
-                    setFileNameInput("");
-                  }
+                    if (e.key === "Escape") {
+                      setTakeName(false);
+                      setCreateType(null);
+                      setFileNameInput("");
+                    }
+                  }}
+                  className="w-full px-2 py-1 text-sm bg-[#3c3c3c] text-white border border-[#007acc] outline-none rounded"
+                />
+              </div>
+            )}
 
-                  if (e.key === "Escape") {
-                    setTakeName(false);
-                    setCreateType(null);
-                    setFileNameInput("");
-                  }
-                }}
-                className="w-full px-2 py-1 text-sm bg-[#3c3c3c] text-white border border-[#007acc] outline-none rounded"
-              />
-            </div>
-          )}
-
-          <FileTreeView
-            tree={files}
-            selectedPath={
-              typeof selectedFolder === "string"
-                ? selectedFolder
-                : selectedFolder.path
-            }
-            onSelect={(node) => {
-              if (node.type === "dir") {
-                setSelectedFolder(node);
-              } else if (node.type == "file") {
-                setOpenFiles((prev) => {
-                  if (prev.some((file) => file.path === node.path)) return prev;
-                  return [...prev, node];
-                });
-                setCurrentOpenFile(node);
-              } else {
-                setSelectedFolder("");
+            <FileTreeView
+              tree={files}
+              selectedPath={
+                typeof selectedFolder === "string"
+                  ? selectedFolder
+                  : selectedFolder.path
               }
-            }}
-          />
+              onSelect={(node) => {
+                if (node.type === "dir") {
+                  setSelectedFolder(node);
+                } else if (node.type == "file") {
+                  setOpenFiles((prev) => {
+                    if (prev.some((file) => file.path === node.path))
+                      return prev;
+                    return [...prev, node];
+                  });
+                  setCurrentOpenFile(node);
+                } else {
+                  setSelectedFolder("");
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -21,13 +21,6 @@ cd frontend
 docker build -t frontend .
 echo "frontend build"
 
-echo "-------------------------------------Building suggetions----------------------------------------------------"
-cd ..
-cd auto-complete
-docker build -t suggetions .
-echo "suggetion build"
-
-
 echo "-------------------------------------Building and starting all services----------------------------------------------------"
 cd ..
 docker compose up --build

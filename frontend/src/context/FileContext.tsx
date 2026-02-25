@@ -1,13 +1,15 @@
 import React from "react";
 
-import type { FileNode } from "../types/index";
+import type { FileNode, FileTree } from "../types/index";
 
 interface IFileContext {
   currentOpenFile: FileNode | null;
   setCurrentOpenFile: (file: FileNode | null) => void;
   openFiles: FileNode[];
-  setOpenFiles: (files: (prev: FileNode[]) => FileNode[]) => void;
+  setOpenFiles: (files: (prev: FileNode[]) => FileNode[] | FileNode[]) => void;
   closeFile: (path: string) => void;
+  fileTree: FileTree;
+  setFileTree: (tree: FileTree) => void;
 }
 
 const FileContext = React.createContext<IFileContext | null>(null);
@@ -17,6 +19,7 @@ export const FileProvider = ({ children }: { children: React.ReactNode }) => {
     null,
   );
   const [openFiles, setOpenFiles] = React.useState<FileNode[]>([]);
+  const [fileTree, setFileTree] = React.useState<FileTree>({});
 
   const closeFile = (path: string) => {
     setOpenFiles((prev) => prev.filter((file) => file.path !== path));
@@ -24,7 +27,15 @@ export const FileProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <FileContext.Provider
-      value={{ currentOpenFile, setCurrentOpenFile, openFiles, setOpenFiles, closeFile }}
+      value={{
+        currentOpenFile,
+        setCurrentOpenFile,
+        openFiles,
+        setOpenFiles,
+        closeFile,
+        fileTree,
+        setFileTree,
+      }}
     >
       {children}
     </FileContext.Provider>
